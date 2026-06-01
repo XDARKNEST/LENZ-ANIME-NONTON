@@ -8,9 +8,33 @@ async function PageEpisode({params}){
     const title = e.title || e.episode_title || params.slug;
     document.title = `${title} | LENZ ANIME NONTON`;
 
-    // 1. ENGINE DEEP CRAWLER VIDEO
+    // 1. ENGINE DEEP CRAWLER VIDEO (UPGRADED UNTUK MULTI-API WBN & OTD)
     function discoverStreams(obj) {
       let list = [];
+
+      // A. JALUR KHUSUS: Deteksi struktur Bertingkat Kualitas milik WBN
+      if (obj.stream && Array.isArray(obj.stream)) {
+        obj.stream.forEach(qualityGroup => {
+          const resolution = qualityGroup.quality || ""; // e.g., "1080p"
+          if (Array.isArray(qualityGroup.links)) {
+            qualityGroup.links.forEach((server, idx) => {
+              const url = server.url || server.link;
+              if (url && typeof url === "string") {
+                const provider = server.provider || server.server || `Server ${idx + 1}`;
+                // Gabungkan kualitas dan nama provider agar informatif di UI
+                const labelName = resolution ? `${resolution} - ${provider}` : provider;
+                
+                if (!list.some(item => item.url === url)) {
+                  list.push({ name: labelName, url: url });
+                }
+              }
+            });
+          }
+        });
+        if (list.length > 0) return list; // Jika jalur WBN sukses, langsung kembalikan data
+      }
+
+      // B. JALUR FALLBACK: Deep Scan untuk OTD dan format standar lainnya
       function scan(curr, key = "") {
         if (!curr) return;
         
@@ -65,6 +89,7 @@ async function PageEpisode({params}){
           }
         }
       }
+      
       scan(obj);
       return list;
     }
@@ -74,10 +99,11 @@ async function PageEpisode({params}){
     // 2. ENGINE DEFAULTSTREAMING CRAWLER
     let defaultIdx = 0;
     if (servers.length > 0) {
+      // Prioritaskan desustream untuk OTD, atau kualitas tertinggi (1080p/720p) VidHide/MEGA untuk WBN
       const foundIdx = servers.findIndex(s => {
         const name = String(s.name || "").toLowerCase();
         const urlStr = String(s.url || "").toLowerCase();
-        return name.includes("default") || name.includes("desustream") || urlStr.includes("desustream");
+        return name.includes("desustream") || urlStr.includes("desustream") || name.includes("1080p") || name.includes("720p");
       });
       if (foundIdx !== -1) {
         defaultIdx = foundIdx;
@@ -91,10 +117,8 @@ async function PageEpisode({params}){
     // ========================================================
     function cleanSlug(item) {
       if (!item) return "";
-      // Jika berupa object, kupas property dalamnya. Jika string, gunakan langsung.
       let s = (typeof item === "object") ? (item.slug || item.endpoint || item.id || "") : String(item);
       
-      // Bersihkan jika struktur data membawa path url lengkap (sisa slash)
       if (s.includes("/")) {
         const parts = s.split("/").filter(Boolean);
         s = parts[parts.length - 1] || s;
@@ -102,7 +126,6 @@ async function PageEpisode({params}){
       return s && s !== "[object Object]" ? s.trim() : "";
     }
 
-    // Mengamankan penamaan key alternatif dari API agar tombol Prev aktif sempurna
     const prev = cleanSlug(e.previous_episode || e.prev || e.prev_episode || e.previous_slug || e.previous);
     const next = cleanSlug(e.next_episode || e.next || e.next_episode || e.next_slug);
     const animeSlug = cleanSlug(e.anime || e.anime_slug);
@@ -176,7 +199,6 @@ async function PageEpisode({params}){
       });
     }
 
-    // Cek status penyimpanan fitur AI Enhance sebelum HTML di-render
     const isEnhanced = localStorage.getItem("lenz_enhance") === "1";
 
     app.innerHTML = `
@@ -199,9 +221,9 @@ async function PageEpisode({params}){
         </div>
 
         ${servers.length ? `
-        <div class="section-head"><h2>Pilih Server</h2></div>
+        <div class="section-head"><h2>Pilih Kualitas & Server</h2></div>
         <div class="server-list">
-          ${servers.map((s,i)=>`<button class="chip ${i===defaultIdx?'active':''}" data-url="${LenzUI.escapeHTML(s.url||'')}">${LenzUI.escapeHTML(s.name || ('Server '+(i+1)))}</button>`).join("")}
+          ${servers.map((s,i)=>`<button class="chip ${i===defaultIdx?'active':''}" data-url="${LenzUI.escapeHTML(s.url||'')}">${LenzUI.escapeHTML(s.name)}</button>`).join("")}
         </div>` : ""}
 
         ${animeSlug ? `<div style="padding:14px 16px"><a class="btn btn-ghost" href="#/anime/${encodeURIComponent(animeSlug)}">📄 Detail Anime</a></div>` : ""}
@@ -230,7 +252,6 @@ async function PageEpisode({params}){
     if(prev) prevBtn.onclick = () => location.hash = `#/episode/${encodeURIComponent(prev)}`;
     if(next) nextBtn.onclick = () => location.hash = `#/episode/${encodeURIComponent(next)}`;
 
-    // Logika Tombol Jalur Pintas AI Enhance
     const enhanceBtn = document.getElementById("btn-enhance");
     enhanceBtn.onclick = () => {
       const isActive = wrap.classList.toggle("enhanced-mode");
