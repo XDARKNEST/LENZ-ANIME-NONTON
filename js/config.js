@@ -7,7 +7,7 @@ window.CONFIG = {
   SHORT_NAME: "LENZ",
   TAGLINE: "Nonton Anime Lebih Mudah, Cepat, dan Nyaman",
 
-  API_BASE: "https://shivraapi.my.id/wbn",
+  API_BASE: "https://shivraapi.my.id/otd",
   JIKAN_API: "https://api.jikan.moe/v4",
 
   PLACEHOLDER_IMAGE: "./assets/no-image.webp",
