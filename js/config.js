@@ -7,14 +7,7 @@ window.CONFIG = {
   SHORT_NAME: "LENZ",
   TAGLINE: "Nonton Anime Lebih Mudah, Cepat, dan Nyaman",
 
-  // --- API ENDPOINTS ---
-  // API OTD sebagai fallback (cadangan)
   API_BASE: "https://shivraapi.my.id/otd",
-  
-  // API WBN sebagai prioritas (karena kualitas video lebih tinggi)
-  WBN_BASE: "https://shivraapi.my.id/wbn",
-  
-  // API Metadata
   JIKAN_API: "https://api.jikan.moe/v4",
 
   PLACEHOLDER_IMAGE: "./assets/no-image.webp",
