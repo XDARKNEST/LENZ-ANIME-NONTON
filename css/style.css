@@ -230,7 +230,14 @@ button{background:none;border:none;cursor:pointer}
   .nav-desktop { display: none !important; }
   .menu-toggle { display: block !important; }
   .bottom-nav { display: flex !important; }
-  .search-form { width: 150px; margin-left: auto; }
+
+  /* FIX: Sembunyikan teks logo & pertahankan kolom pencarian persis mode desktop */
+  .logo-text { display: none !important; } 
+  .search-form { 
+    width: 260px !important; /* Ukuran lebar persis versi desktop */
+    margin-left: auto !important;
+    display: flex !important; 
+  }
 
   /* 2. Layout Spacing Mobile */
   .container { padding: 0 12px; }
