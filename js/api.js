@@ -1,12 +1,7 @@
-/* ========= LENZ API Client =========
- * Wrapper di atas Fetch API dengan cache & timeout.
- * Mudah diganti jika base URL berubah — cukup edit config.js.
- */
 (function(){
-  const { API_BASE, JIKAN_API, CACHE, REQUEST_TIMEOUT } = window.CONFIG;
+  const { API_BASE, WBN_BASE, JIKAN_API, CACHE, REQUEST_TIMEOUT } = window.CONFIG;
 
   async function request(url, ttl, cacheKey){
-    // Cache hit
     if(cacheKey){
       const cached = window.LenzCache.get(cacheKey);
       if(cached) return cached;
@@ -23,11 +18,33 @@
   }
 
   const API = {
+    // --- SMART FALLBACK: Coba WBN dulu, kalau gagal ke OTD ---
+    async episode(slug) {
+      try {
+        // Coba WBN
+        const wbnData = await request(`${WBN_BASE}/episode/${slug}`, CACHE.EPISODE, `ep_${slug}`);
+        if (wbnData && wbnData.data) return wbnData;
+      } catch (e) {
+        console.warn("WBN API gagal, fallback ke OTD untuk episode:", slug);
+      }
+      // Fallback ke OTD
+      return request(`${API_BASE}/episode/${slug}`, CACHE.EPISODE, `ep_${slug}`);
+    },
+
+    async anime(slug) {
+      try {
+        const wbnData = await request(`${WBN_BASE}/anime/${slug}`, CACHE.ANIME, `anime_${slug}`);
+        if (wbnData && wbnData.data) return wbnData;
+      } catch (e) {
+        console.warn("WBN API gagal, fallback ke OTD untuk anime:", slug);
+      }
+      return request(`${API_BASE}/anime/${slug}`, CACHE.ANIME, `anime_${slug}`);
+    },
+    // --------------------------------------------------------
+
     home: ()         => request(`${API_BASE}/home`, CACHE.HOME, "home"),
     ongoing: (p=1)   => request(`${API_BASE}/ongoing?page=${p}`, CACHE.ONGOING, `ongoing_${p}`),
     completed: (p=1) => request(`${API_BASE}/completed?page=${p}`, CACHE.COMPLETED, `completed_${p}`),
-    anime: (slug)    => request(`${API_BASE}/anime/${slug}`, CACHE.ANIME, `anime_${slug}`),
-    episode: (slug)  => request(`${API_BASE}/episode/${slug}`, CACHE.EPISODE, `ep_${slug}`),
     batch: (slug)    => request(`${API_BASE}/batch/${slug}`, CACHE.BATCH, `batch_${slug}`),
     schedule: (day)  => request(`${API_BASE}/schedule?day=${encodeURIComponent(day)}`, CACHE.SCHEDULE, `sch_${day}`),
     genres: ()       => request(`${API_BASE}/genres`, CACHE.GENRES, "genres"),
@@ -38,10 +55,6 @@
     jikan: (title)   => request(`${JIKAN_API}/anime?q=${encodeURIComponent(title)}&limit=1`, CACHE.POSTER, `jikan_${title.toLowerCase()}`)
   };
 
-  /**
-   * Helper: ambil array dari berbagai bentuk response.
-   * API utama bisa pakai key berbeda (data, animeList, results, dll).
-   */
   API.extractList = function(payload, ...keys){
     if(!payload) return [];
     if(Array.isArray(payload)) return payload;
@@ -49,7 +62,6 @@
     for(const k of keys){
       if(root && Array.isArray(root[k])) return root[k];
     }
-    // Fallback: cari array pertama
     if(root && typeof root === "object"){
       for(const v of Object.values(root)){
         if(Array.isArray(v)) return v;
